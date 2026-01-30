@@ -48,6 +48,8 @@ class ServidorGPS:
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.socket.bind(("0.0.0.0", self.puerto))
+            # Agregar timeout para que Ctrl+C funcione en Windows
+            self.socket.settimeout(1.0)
             print(f"[✓] Servidor escuchando en puerto {self.puerto}")
             print("[✓] Esperando dispositivos GPS...\n")
             return True
@@ -242,7 +244,7 @@ class ServidorGPS:
 
         try:
             while True:
-                # Recibir mensaje
+                # Recibir mensaje con timeout
                 try:
                     mensaje, direccion = self.socket.recvfrom(1024)  # type: ignore
 
@@ -263,6 +265,9 @@ class ServidorGPS:
                         self.errores += 1
                         print(f"[✗] Error al procesar mensaje de {direccion}: {error}")
 
+                except socket.timeout:
+                    # Timeout normal, continuar esperando
+                    continue
                 except socket.error as e:
                     print(f"[✗] Error de socket: {e}")
 

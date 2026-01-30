@@ -1,298 +1,299 @@
 """
-Servidor GPS - Receptor Central de Datos GPS
+Cliente GPS - Simulador de Dispositivo GPS
 Redes de Computadoras - Práctica 3
 
-Este programa recibe datos de múltiples dispositivos GPS
-y los procesa/almacena usando el protocolo UDP.
+Este programa simula un dispositivo GPS que envía datos de posición
+al servidor central usando el protocolo UDP.
 """
 
 import socket
 import time
+import random
 import sys
-from datetime import datetime
 from gps_protocolo import (
     FLAG_BATERIA_BAJA,
     FLAG_EN_MOVIMIENTO,
     FLAG_IGNICION_ON,
-    FLAG_SOS,
     PUERTO_SERVIDOR,
-    TIPO_DATOS_GPS,
-    convertir_coordenadas,
+    TIPO_ACK,
+    coordenadas_a_raw,
     desempaquetar_mensaje,
-    empaquetar_ack,
+    empaquetar_mensaje_gps,
 )
 
 
-class ServidorGPS:
-    def __init__(self, puerto=PUERTO_SERVIDOR, enviar_ack=True):
-        self.puerto = puerto
-        self.enviar_ack = enviar_ack
+class DispositivoGPS:
+    def __init__(
+        self, id_dispositivo, servidor_ip="127.0.0.1", servidor_puerto=PUERTO_SERVIDOR
+    ):
+        self.id_dispositivo = id_dispositivo
+        self.servidor = (servidor_ip, servidor_puerto)
+        self.secuencia = 0
         self.socket = None
-        self.dispositivos = (
-            {}
-        )  # {id_dispositivo: {'ultima_seq': n, 'ultima_pos': (lat,lon), ...}}
-        self.mensajes_recibidos = 0
-        self.mensajes_perdidos = 0
-        self.mensajes_duplicados = 0
-        self.errores = 0
 
-        print("\n" + "=" * 60)
-        print("  SERVIDOR GPS CENTRAL")
-        print("=" * 60)
-        print(f"  Puerto: {self.puerto}")
-        print(f"  ACK automático: {'Sí' if self.enviar_ack else 'No'}")
-        print("=" * 60 + "\n")
+        # Estado del vehículo simulado
+        self.latitud = -17.3935  # Cochabamba inicial
+        self.longitud = -66.1570
+        self.altitud = 2558
+        self.velocidad = 0.0  # km/h
+        self.rumbo = 0.0  # grados
+        self.bateria = 100
+        self.en_movimiento = False
+        self.ignicion = False
 
-    def iniciar(self):
-        """Inicia el servidor UDP"""
+        print(f"\n{'='*60}")
+        print(f"  DISPOSITIVO GPS #{self.id_dispositivo}")
+        print(f"{'='*60}")
+        print(f"  Servidor: {servidor_ip}:{servidor_puerto}")
+        print(f"  Posición inicial: {self.latitud:.4f}°, {self.longitud:.4f}°")
+        print(f"{'='*60}\n")
+
+    def conectar(self):
+        """Crea el socket UDP"""
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.socket.bind(("0.0.0.0", self.puerto))
-            print(f"[✓] Servidor escuchando en puerto {self.puerto}")
-            print("[✓] Esperando dispositivos GPS...\n")
+            self.socket.settimeout(3.0)  # Timeout de 3 segundos para ACK
+            print("[✓] Socket UDP creado exitosamente")
             return True
         except socket.error as e:
-            print(f"[✗] Error al iniciar servidor: {e}")
+            print(f"[✗] Error al crear socket: {e}")
             return False
 
-    def registrar_dispositivo(self, id_dispositivo):
-        """Registra un nuevo dispositivo o actualiza su información"""
-        if id_dispositivo not in self.dispositivos:
-            self.dispositivos[id_dispositivo] = {
-                "primera_conexion": time.time(),
-                "ultima_conexion": time.time(),
-                "ultima_seq": 0,
-                "mensajes_recibidos": 0,
-                "ultima_pos": None,
-                "ultima_velocidad": 0,
-                "ultimo_rumbo": 0,
-                "bateria": 100,
-                "flags": 0,
-            }
-            print(f"\n[+] Nuevo dispositivo registrado: GPS #{id_dispositivo}")
+    def simular_movimiento(self):
+        """Simula el movimiento del vehículo"""
+        if self.en_movimiento:
+            # Avanzar en la dirección del rumbo
+            # Aproximación simple: 1 km = 0.01 grados
+            desplazamiento = (self.velocidad / 3600) * 0.01  # Por segundo
+
+            import math
+
+            rumbo_rad = math.radians(self.rumbo)
+            self.latitud += desplazamiento * math.cos(rumbo_rad)
+            self.longitud += desplazamiento * math.sin(rumbo_rad)
+
+            # Pequeñas variaciones aleatorias
+            self.velocidad += random.uniform(-2, 2)
+            self.velocidad = max(0, min(120, self.velocidad))  # Limitar 0-120 km/h
+
+            self.rumbo += random.uniform(-5, 5)
+            self.rumbo = self.rumbo % 360
+
+            # Consumo de batería (más rápido si está en movimiento)
+            self.bateria -= random.uniform(0.01, 0.05)
         else:
-            self.dispositivos[id_dispositivo]["ultima_conexion"] = time.time()
+            # Consumo mínimo de batería en reposo
+            self.bateria -= random.uniform(0.001, 0.01)
 
-    def procesar_mensaje(self, datos, direccion_cliente):
-        """Procesa un mensaje GPS recibido"""
-        id_disp = datos["id_dispositivo"]
-        seq = datos["secuencia"]
+        self.bateria = max(0, self.bateria)
 
-        # Registrar dispositivo
-        self.registrar_dispositivo(id_disp)
+    def obtener_flags(self):
+        """Determina los flags del mensaje según el estado"""
+        flags = 0
 
-        # Verificar secuencia
-        ultima_seq = self.dispositivos[id_disp]["ultima_seq"]
+        if self.bateria < 20:
+            flags |= FLAG_BATERIA_BAJA
 
-        if seq <= ultima_seq:
-            # Mensaje duplicado o fuera de orden
-            self.mensajes_duplicados += 1
-            print(
-                f"[!] Mensaje duplicado/antiguo: GPS #{id_disp}, SEQ={seq} (esperaba >{ultima_seq})"
-            )
-            return False
+        if self.en_movimiento:
+            flags |= FLAG_EN_MOVIMIENTO
 
-        if seq > ultima_seq + 1:
-            # Se perdieron mensajes
-            perdidos = seq - ultima_seq - 1
-            self.mensajes_perdidos += perdidos
-            print(
-                f"[!] Se perdieron {perdidos} mensaje(s): GPS #{id_disp}, salto de SEQ {ultima_seq} a {seq}"
-            )
+        if self.ignicion:
+            flags |= FLAG_IGNICION_ON
 
-        # Actualizar información del dispositivo
-        self.dispositivos[id_disp]["ultima_seq"] = seq
-        self.dispositivos[id_disp]["mensajes_recibidos"] += 1
+        return flags
 
-        if datos["tipo"] == TIPO_DATOS_GPS:
-            lat, lon = convertir_coordenadas(datos["latitud"], datos["longitud"])
-            vel = datos["velocidad"] / 10.0
-            rumbo = datos["rumbo"] / 10.0
-
-            self.dispositivos[id_disp]["ultima_pos"] = (lat, lon)
-            self.dispositivos[id_disp]["ultima_velocidad"] = vel
-            self.dispositivos[id_disp]["ultimo_rumbo"] = rumbo
-            self.dispositivos[id_disp]["bateria"] = datos["bateria"]
-            self.dispositivos[id_disp]["flags"] = datos["flags"]
-
-            # Mostrar datos recibidos
-            self.mostrar_datos_gps(datos, direccion_cliente)
-
-            # Guardar en log (opcional)
-            self.guardar_log(datos)
-
-        self.mensajes_recibidos += 1
-        return True
-
-    def mostrar_datos_gps(self, datos, direccion):
-        """Muestra los datos GPS recibidos en formato legible"""
-        lat, lon = convertir_coordenadas(datos["latitud"], datos["longitud"])
-        vel = datos["velocidad"] / 10.0
-        rumbo = datos["rumbo"] / 10.0
-
-        print(f"\n{'─'*60}")
-        print("[←] DATOS GPS RECIBIDOS")
-        print(f"{'─'*60}")
-        print(f"  Origen:       {direccion[0]}:{direccion[1]}")
-        print(f"  Dispositivo:  GPS #{datos['id_dispositivo']}")
-        print(f"  Secuencia:    #{datos['secuencia']}")
-        print(f"  Coordenadas:  {lat:.7f}°, {lon:.7f}°")
-        print(f"  Altitud:      {datos['altitud']} m")
-        print(f"  Velocidad:    {vel:.1f} km/h")
-        print(f"  Rumbo:        {rumbo:.1f}°")
-        print(f"  Batería:      {datos['bateria']}%")
-        print(
-            f"  Timestamp:    {datetime.fromtimestamp(datos['timestamp']).strftime('%Y-%m-%d %H:%M:%S')}"
-        )
-
-        # Mostrar flags activos
-        flags_activos = []
-        if datos["flags"] & FLAG_BATERIA_BAJA:
-            flags_activos.append("⚠ BATERÍA BAJA")
-        if datos["flags"] & FLAG_SOS:
-            flags_activos.append("🆘 SOS")
-        if datos["flags"] & FLAG_EN_MOVIMIENTO:
-            flags_activos.append("🚗 EN MOVIMIENTO")
-        if datos["flags"] & FLAG_IGNICION_ON:
-            flags_activos.append("🔑 IGNICIÓN ON")
-
-        if flags_activos:
-            print(f"  Estado:       {', '.join(flags_activos)}")
-
-        print(f"{'─'*60}\n")
-
-    def enviar_ack_mensaje(self, id_dispositivo, secuencia, direccion):
-        """Envía un ACK al dispositivo"""
-        if not self.enviar_ack:
-            return
-
+    def enviar_datos(self):
+        """Envía datos GPS al servidor"""
         if self.socket is None:
             print("[✗] Error: socket no inicializado")
-            return
+            return False
 
-        try:
-            ack = empaquetar_ack(id_dispositivo, secuencia)
-            self.socket.sendto(ack, direccion)
-            print(f"[→] ACK enviado a GPS #{id_dispositivo} (SEQ={secuencia})")
-        except socket.error as e:
-            print(f"[✗] Error al enviar ACK: {e}")
+        self.secuencia += 1
 
-    def guardar_log(self, datos):
-        """Guarda los datos en un archivo de log"""
+        # Convertir coordenadas a formato raw
+        lat_raw, lon_raw = coordenadas_a_raw(self.latitud, self.longitud)
+
+        # Preparar datos
+        vel_raw = int(self.velocidad * 10)
+        rumbo_raw = int(self.rumbo * 10)
+        flags = self.obtener_flags()
+
+        # Empaquetar mensaje
+        mensaje = empaquetar_mensaje_gps(
+            id_dispositivo=self.id_dispositivo,
+            secuencia=self.secuencia,
+            latitud=lat_raw,
+            longitud=lon_raw,
+            altitud=self.altitud,
+            velocidad=vel_raw,
+            rumbo=rumbo_raw,
+            bateria=int(self.bateria),
+            estado=0x00,
+            flags=flags,
+        )
+
+        # Enviar por UDP
         try:
-            lat, lon = convertir_coordenadas(datos["latitud"], datos["longitud"])
-            vel = datos["velocidad"] / 10.0
-            rumbo = datos["rumbo"] / 10.0
-            timestamp_str = datetime.fromtimestamp(datos["timestamp"]).strftime(
-                "%Y-%m-%d %H:%M:%S"
+            self.socket.sendto(mensaje, self.servidor)
+            print(f"[→] Mensaje #{self.secuencia} enviado ({len(mensaje)} bytes)")
+            print(f"    Pos: {self.latitud:.6f}°, {self.longitud:.6f}°")
+            print(
+                f"    Vel: {self.velocidad:.1f} km/h, Rumbo: {self.rumbo:.1f}°, Bat: {self.bateria:.0f}%"
             )
 
-            with open("gps_log.txt", "a") as f:
-                f.write(
-                    f"{timestamp_str}|GPS{datos['id_dispositivo']}|SEQ{datos['secuencia']}|"
-                )
-                f.write(f"{lat:.7f}|{lon:.7f}|{datos['altitud']}|")
-                f.write(
-                    f"{vel:.1f}|{rumbo:.1f}|{datos['bateria']}|0x{datos['flags']:02X}\n"
-                )
+            # Esperar ACK opcional
+            try:
+                respuesta, addr = self.socket.recvfrom(1024)
+                datos_ack, error = desempaquetar_mensaje(respuesta)
 
-        except IOError as e:
-            print(f"[!] Error al guardar log: {e}")
+                if datos_ack and datos_ack["tipo"] == TIPO_ACK:
+                    if datos_ack["secuencia"] == self.secuencia:
+                        print(f"[←] ACK recibido para mensaje #{self.secuencia}")
+                    else:
+                        print(
+                            f"[!] ACK recibido con secuencia incorrecta: {datos_ack['secuencia']}"
+                        )
 
-    def mostrar_estadisticas(self):
-        """Muestra estadísticas del servidor"""
-        print("\n" + "=" * 60)
-        print("  ESTADÍSTICAS DEL SERVIDOR")
-        print("=" * 60)
-        print(f"  Mensajes recibidos:  {self.mensajes_recibidos}")
-        print(f"  Mensajes perdidos:   {self.mensajes_perdidos}")
-        print(f"  Mensajes duplicados: {self.mensajes_duplicados}")
-        print(f"  Errores detectados:  {self.errores}")
-        print(f"  Dispositivos activos: {len(self.dispositivos)}")
-        print("=" * 60)
+            except socket.timeout:
+                print("[!] No se recibió ACK (timeout)")
 
-        if self.dispositivos:
-            print("\n  DISPOSITIVOS CONECTADOS:")
-            print("  " + "-" * 58)
-            for id_disp, info in self.dispositivos.items():
-                tiempo_desde = int(time.time() - info["ultima_conexion"])
-                print(
-                    f"  GPS #{id_disp:4d} | Mensajes: {info['mensajes_recibidos']:4d} | "
-                    f"Última SEQ: {info['ultima_seq']:4d} | "
-                    f"Hace: {tiempo_desde}s"
-                )
+            return True
 
-                if info["ultima_pos"]:
-                    lat, lon = info["ultima_pos"]
-                    print(
-                        f"           | Pos: {lat:.6f}°, {lon:.6f}° | "
-                        f"Vel: {info['ultima_velocidad']:.1f} km/h | "
-                        f"Bat: {info['bateria']}%"
-                    )
-            print("  " + "-" * 58)
-        print()
+        except socket.error as e:
+            print(f"[✗] Error al enviar: {e}")
+            return False
 
-    def ejecutar(self):
-        """Ejecuta el servidor en modo escucha"""
-        if not self.iniciar():
-            print("\n[✗] No se pudo iniciar el servidor. Saliendo...\n")
+    def ejecutar(self, intervalo=5, duracion=60):
+        """
+        Ejecuta el cliente GPS durante un tiempo determinado
+
+        Parámetros:
+        - intervalo: segundos entre envíos
+        - duracion: duración total en segundos (0 = infinito)
+        """
+        if not self.conectar():
             return
 
-        print("[▶] Servidor en ejecución (Ctrl+C para detener)\n")
+        print("\n[▶] Iniciando envío de datos GPS...")
+        print(f"    Intervalo: {intervalo}s")
+        if duracion > 0:
+            print(f"    Duración: {duracion}s")
+        else:
+            print("    Duración: indefinido (Ctrl+C para detener)")
+        print()
+
+        tiempo_inicio = time.time()
 
         try:
             while True:
-                # Recibir mensaje
-                try:
-                    mensaje, direccion = self.socket.recvfrom(1024)  # type: ignore
+                # Verificar duración
+                if duracion > 0 and (time.time() - tiempo_inicio) >= duracion:
+                    print(f"\n[■] Tiempo completado ({duracion}s)")
+                    break
 
-                    # Desempaquetar mensaje
-                    datos, error = desempaquetar_mensaje(mensaje)
+                # Simular movimiento
+                self.simular_movimiento()
 
-                    if datos:
-                        # Procesar mensaje válido
-                        exito = self.procesar_mensaje(datos, direccion)
+                # Enviar datos
+                self.enviar_datos()
 
-                        # Enviar ACK si está habilitado y el mensaje fue procesado
-                        if exito and datos["tipo"] == TIPO_DATOS_GPS:
-                            self.enviar_ack_mensaje(
-                                datos["id_dispositivo"], datos["secuencia"], direccion
-                            )
-                    else:
-                        # Error en el mensaje
-                        self.errores += 1
-                        print(f"[✗] Error al procesar mensaje de {direccion}: {error}")
-
-                except socket.error as e:
-                    print(f"[✗] Error de socket: {e}")
+                # Esperar antes del siguiente envío
+                time.sleep(intervalo)
 
         except KeyboardInterrupt:
-            print("\n\n[■] Servidor detenido por el usuario")
+            print("\n\n[■] Detenido por el usuario")
         finally:
-            self.mostrar_estadisticas()
             if self.socket is not None:
                 self.socket.close()
                 print("[✓] Socket cerrado\n")
             else:
-                print("[!] Socket ya estaba cerrado\n")
+                print("[!] Socket no estaba inicializado\n")
+
+
+def mostrar_menu():
+    """Muestra el menú de opciones"""
+    print("\n" + "=" * 60)
+    print("  SIMULADOR DE DISPOSITIVO GPS")
+    print("=" * 60)
+    print("\nOpciones de simulación:")
+    print("  1. Vehículo estacionado (sin movimiento)")
+    print("  2. Vehículo en movimiento urbano (30 km/h)")
+    print("  3. Vehículo en carretera (80 km/h)")
+    print("  4. Modo personalizado")
+    print("  5. Salir")
+    print("=" * 60)
 
 
 def main():
     """Función principal"""
 
     # Configuración por defecto
-    puerto = PUERTO_SERVIDOR
-    enviar_ack = True
+    servidor_ip = "127.0.0.1"
+    servidor_puerto = PUERTO_SERVIDOR
+    id_dispositivo = random.randint(1000, 9999)
 
-    # Argumentos de línea de comandos
+    # Permitir argumentos de línea de comandos
     if len(sys.argv) >= 2:
-        puerto = int(sys.argv[1])
+        servidor_ip = sys.argv[1]
     if len(sys.argv) >= 3:
-        enviar_ack = sys.argv[2].lower() in ["true", "1", "si", "yes"]
+        servidor_puerto = int(sys.argv[2])
+    if len(sys.argv) >= 4:
+        id_dispositivo = int(sys.argv[3])
 
-    # Crear y ejecutar servidor
-    servidor = ServidorGPS(puerto=puerto, enviar_ack=enviar_ack)
-    servidor.ejecutar()
+    while True:
+        mostrar_menu()
+        opcion = input("\nSeleccione una opción (1-5): ").strip()
+
+        if opcion == "5":
+            print("\n[✓] Saliendo...\n")
+            break
+
+        # Crear dispositivo GPS
+        gps = DispositivoGPS(id_dispositivo, servidor_ip, servidor_puerto)
+
+        if opcion == "1":
+            # Vehículo estacionado
+            gps.velocidad = 0
+            gps.en_movimiento = False
+            gps.ignicion = False
+            gps.ejecutar(intervalo=10, duracion=60)
+
+        elif opcion == "2":
+            # Vehículo urbano
+            gps.velocidad = 30
+            gps.rumbo = random.uniform(0, 360)
+            gps.en_movimiento = True
+            gps.ignicion = True
+            gps.ejecutar(intervalo=5, duracion=60)
+
+        elif opcion == "3":
+            # Vehículo en carretera
+            gps.velocidad = 80
+            gps.rumbo = random.uniform(0, 360)
+            gps.en_movimiento = True
+            gps.ignicion = True
+            gps.ejecutar(intervalo=3, duracion=60)
+
+        elif opcion == "4":
+            # Modo personalizado
+            print("\n--- Configuración Personalizada ---")
+            try:
+                intervalo = int(input("Intervalo de envío (segundos, ej: 5): "))
+                duracion = int(input("Duración total (segundos, 0=infinito): "))
+                velocidad = float(input("Velocidad inicial (km/h, ej: 50): "))
+                rumbo = float(input("Rumbo inicial (grados, 0-360): "))
+
+                gps.velocidad = velocidad
+                gps.rumbo = rumbo
+                gps.en_movimiento = velocidad > 0
+                gps.ignicion = velocidad > 0
+
+                gps.ejecutar(intervalo=intervalo, duracion=duracion)
+
+            except ValueError:
+                print("[✗] Valores inválidos, intente nuevamente")
+        else:
+            print("[✗] Opción inválida")
 
 
 if __name__ == "__main__":
