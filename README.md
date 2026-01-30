@@ -32,12 +32,12 @@ Diseñar e implementar un **protocolo de comunicación eficiente** para disposit
 
 ```
 ┌─────────────────┐                    ┌─────────────────┐
-│  Dispositivo GPS │                    │ Servidor Central│
-│   (Cliente)      │                    │   (Receptor)    │
+│ Dispositivo GPS │                    │ Servidor Central│
+│  (Cliente)      │                    │   (Receptor)    │
 ├─────────────────┤                    ├─────────────────┤
-│ • Genera datos  │ ───UDP (30B)────> │ • Recibe datos  │
+│ • Genera datos  │ ───UDP (30B)────>  │ • Recibe datos  │
 │ • Empaqueta     │                    │ • Valida CRC    │
-│ • Envía cada 5s │ <───ACK (10B)───  │ • Almacena log  │
+│ • Envía cada 5s │ <───ACK (10B)───   │ • Almacena log  │
 │ • Espera ACK    │                    │ • Registra stats│
 └─────────────────┘                    └─────────────────┘
 ```
@@ -50,14 +50,14 @@ Diseñar e implementar un **protocolo de comunicación eficiente** para disposit
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                    CABECERA (10 bytes)                    │
+│                    CABECERA (10 bytes)                   │
 ├────┬────┬──────┬──────┬──────────┬────────┬──────────────┤
 │VER │TIPO│ ID   │ SEQ  │CHECKSUM  │ FLAGS  │   (reserva)  │
 │ 1B │ 1B │ 2B   │ 2B   │  2B      │ 2B     │              │
 └────┴────┴──────┴──────┴──────────┴────────┴──────────────┘
 
 ┌──────────────────────────────────────────────────────────┐
-│                     PAYLOAD (20 bytes)                    │
+│                     PAYLOAD (20 bytes)                   │
 ├────────┬─────────┬─────┬──────────┬─────┬───────┬───┬────┤
 │LATITUD │LONGITUD │ ALT │TIMESTAMP │ VEL │RUMBO  │BAT│EST │
 │  4B    │   4B    │ 2B  │   4B     │ 2B  │  2B   │1B │ 1B │
