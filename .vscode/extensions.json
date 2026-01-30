@@ -1,0 +1,20 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.debugpy",
+    "ms-python.vscode-python-envs",
+    "charliermarsh.ruff",
+    "ms-python.black-formatter",
+    "ms-python.isort",
+    "github.copilot",
+    "github.copilot-chat",
+    "eamodio.gitlens",
+    "usernamehw.errorlens",
+    "formulahendry.code-runner",
+    "kevinrose.vsc-python-indent",
+    "mechatroner.rainbow-csv",
+    "yzhang.markdown-all-in-one",
+    "pkief.material-icon-theme"
+  ]
+}

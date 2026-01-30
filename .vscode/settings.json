@@ -1,0 +1,51 @@
+{
+  // Python
+  "python.defaultInterpreterPath": ".venv/bin/python",
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": true,
+
+  // Formato
+  "editor.formatOnSave": true,
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter"
+  },
+
+  // Black
+  "black-formatter.args": [
+    "--line-length",
+    "88"
+  ],
+
+  // isort
+  "isort.args": [
+    "--profile",
+    "black"
+  ],
+
+  // Ruff
+  "ruff.enable": true,
+
+  // Testing
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.autoTestDiscoverOnSaveEnabled": true,
+
+  // UI / UX
+  "workbench.iconTheme": "material-icon-theme",
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": true,
+
+  // Git
+  "git.enableSmartCommit": true,
+
+  // ErrorLens
+  "errorLens.enabled": true,
+
+  // Files
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/.mypy_cache": true,
+    "**/.ruff_cache": true
+  }
+}
