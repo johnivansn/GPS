@@ -7,6 +7,7 @@ y los procesa/almacena usando el protocolo UDP.
 """
 
 import socket
+import os
 import time
 import sys
 from datetime import datetime
@@ -26,7 +27,13 @@ from gps_protocolo import (
 
 
 class ServidorGPS:
-    def __init__(self, puerto=PUERTO_SERVIDOR, enviar_ack=True):
+    def __init__(
+        self,
+        puerto=PUERTO_SERVIDOR,
+        enviar_ack=True,
+        log_path="gps_log.txt",
+        max_log_bytes=1_000_000,
+    ):
         self.puerto = puerto
         self.enviar_ack = enviar_ack
         self.socket = None
@@ -37,12 +44,20 @@ class ServidorGPS:
         self.mensajes_perdidos = 0
         self.mensajes_duplicados = 0
         self.errores = 0
+        self.ventana_tiempo_seg = 300  # 5 minutos
+        self.log_path = log_path
+        self.max_log_bytes = max_log_bytes
 
         print("\n" + "=" * 60)
         print("  SERVIDOR GPS CENTRAL")
         print("=" * 60)
         print(f"  Puerto: {self.puerto}")
         print(f"  ACK automático: {'Sí' if self.enviar_ack else 'No'}")
+        print(f"  Ventana tiempo: {self.ventana_tiempo_seg}s")
+        if self.log_path:
+            print(f"  Log: {self.log_path} (max {self.max_log_bytes} bytes)")
+        else:
+            print("  Log: deshabilitado")
         print("=" * 60 + "\n")
 
     def iniciar(self):
@@ -123,6 +138,15 @@ class ServidorGPS:
         self.dispositivos[id_disp]["mensajes_recibidos"] += 1
 
         if datos["tipo"] == TIPO_DATOS_GPS:
+            # Validar ventana temporal (anti-replay básico)
+            ahora = time.time()
+            if abs(datos["timestamp"] - ahora) > self.ventana_tiempo_seg:
+                self.errores += 1
+                print(
+                    f"[!] Timestamp fuera de ventana: GPS #{id_disp}, TS={datos['timestamp']}"
+                )
+                return False
+
             lat, lon = convertir_coordenadas(datos["latitud"], datos["longitud"])
             vel = datos["velocidad"] / 10.0
             rumbo = datos["rumbo"] / 10.0
@@ -198,6 +222,21 @@ class ServidorGPS:
         except socket.error as e:
             print(f"[✗] Error al enviar ACK: {e}")
 
+    def _rotar_log_si_es_necesario(self):
+        """Rotación simple: renombra log a .1 si supera el tamaño máximo"""
+        if not self.log_path:
+            return
+        try:
+            if os.path.exists(self.log_path):
+                tam = os.path.getsize(self.log_path)
+                if tam >= self.max_log_bytes:
+                    destino = f"{self.log_path}.1"
+                    if os.path.exists(destino):
+                        os.remove(destino)
+                    os.rename(self.log_path, destino)
+        except OSError as e:
+            print(f"[!] Error al rotar log: {e}")
+
     def mostrar_heartbeat(self, datos, direccion):
         """Muestra un heartbeat recibido"""
         print(f"\n{'─'*60}")
@@ -214,7 +253,10 @@ class ServidorGPS:
 
     def guardar_log(self, datos):
         """Guarda los datos en un archivo de log"""
+        if not self.log_path:
+            return
         try:
+            self._rotar_log_si_es_necesario()
             lat, lon = convertir_coordenadas(datos["latitud"], datos["longitud"])
             vel = datos["velocidad"] / 10.0
             rumbo = datos["rumbo"] / 10.0
@@ -222,7 +264,7 @@ class ServidorGPS:
                 "%Y-%m-%d %H:%M:%S"
             )
 
-            with open("gps_log.txt", "a") as f:
+            with open(self.log_path, "a") as f:
                 f.write(
                     f"{timestamp_str}|GPS{datos['id_dispositivo']}|SEQ{datos['secuencia']}|"
                 )
@@ -327,13 +369,32 @@ def main():
         try:
             puerto = int(sys.argv[1])
         except ValueError:
-            print("[✗] Puerto inválido. Uso: python src/gps_servidor.py [puerto] [ack=true|false]")
+            print(
+                "[✗] Puerto inválido. Uso: python src/gps_servidor.py [puerto] [ack=true|false] [log_path] [max_kb]"
+            )
             return
     if len(sys.argv) >= 3:
         enviar_ack = sys.argv[2].lower() in ["true", "1", "si", "yes"]
+    log_path = "gps_log.txt"
+    max_log_bytes = 1_000_000
+    if len(sys.argv) >= 4:
+        log_path = sys.argv[3]
+    if len(sys.argv) >= 5:
+        try:
+            max_log_bytes = int(sys.argv[4]) * 1024
+        except ValueError:
+            print(
+                "[✗] max_kb inválido. Uso: python src/gps_servidor.py [puerto] [ack=true|false] [log_path] [max_kb]"
+            )
+            return
 
     # Crear y ejecutar servidor
-    servidor = ServidorGPS(puerto=puerto, enviar_ack=enviar_ack)
+    servidor = ServidorGPS(
+        puerto=puerto,
+        enviar_ack=enviar_ack,
+        log_path=log_path,
+        max_log_bytes=max_log_bytes,
+    )
     servidor.ejecutar()
 
 

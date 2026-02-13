@@ -310,10 +310,10 @@ GPS/
 python gps_protocolo.py
 
 # 2) Iniciar servidor
-python gps_servidor.py
+python src/gps_servidor.py
 
 # 3) Ejecutar cliente
-python gps_cliente.py
+python src/gps_cliente.py
 ```
 
 ### Paso 1: Probar el Protocolo
@@ -348,10 +348,13 @@ python src/gps_protocolo.py
 
 ```bash
 # Opción 1: Configuración por defecto
-python gps_servidor.py
+python src/gps_servidor.py
 
 # Opción 2: Puerto personalizado + ACK deshabilitado
-python gps_servidor.py 8888 false
+python src/gps_servidor.py 8888 false
+
+# Opción 3: Puerto + ACK + log path + max log (KB)
+python src/gps_servidor.py 8888 true logs/gps_log.txt 1024
 ```
 
 **Pantalla del servidor:**
@@ -388,7 +391,8 @@ Seleccione el modo de operación:
   2. 🏙️  Movimiento urbano (30 km/h)
   3. 🛣️  Carretera (80 km/h)
   4. ⚙️  Configuración personalizada
-  5. ❌ Salir
+  5. 💓 Enviar solo HEARTBEAT
+  6. ❌ Salir
 
 Opción: _
 ```
@@ -403,8 +407,8 @@ Opción: _
 1. **Esperar 30-60 segundos** y reintentar
 2. **Usar otro puerto:**
 ```bash
-   python gps_servidor.py 8888
-   python gps_cliente.py 127.0.0.1 8888 1234
+   python src/gps_servidor.py 8888
+   python src/gps_cliente.py 127.0.0.1 8888 1234
 ```
 3. **Liberar el puerto (Windows):**
 ```cmd
