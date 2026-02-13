@@ -17,6 +17,7 @@ from gps_protocolo import (
     FLAG_SOS,
     PUERTO_SERVIDOR,
     TIPO_DATOS_GPS,
+    TIPO_HEARTBEAT,
     convertir_coordenadas,
     desempaquetar_mensaje,
     empaquetar_ack,
@@ -137,6 +138,9 @@ class ServidorGPS:
 
             # Guardar en log (opcional)
             self.guardar_log(datos)
+        elif datos["tipo"] == TIPO_HEARTBEAT:
+            self.dispositivos[id_disp]["flags"] = datos["flags"]
+            self.mostrar_heartbeat(datos, direccion_cliente)
 
         self.mensajes_recibidos += 1
         return True
@@ -193,6 +197,20 @@ class ServidorGPS:
             print(f"[→] ACK enviado a GPS #{id_dispositivo} (SEQ={secuencia})")
         except socket.error as e:
             print(f"[✗] Error al enviar ACK: {e}")
+
+    def mostrar_heartbeat(self, datos, direccion):
+        """Muestra un heartbeat recibido"""
+        print(f"\n{'─'*60}")
+        print("[←] HEARTBEAT RECIBIDO")
+        print(f"{'─'*60}")
+        print(f"  Origen:       {direccion[0]}:{direccion[1]}")
+        print(f"  Dispositivo:  GPS #{datos['id_dispositivo']}")
+        print(f"  Secuencia:    #{datos['secuencia']}")
+        print(
+            f"  Timestamp:    {datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        print(f"  Flags:        0x{datos['flags']:02X}")
+        print(f"{'─'*60}\n")
 
     def guardar_log(self, datos):
         """Guarda los datos en un archivo de log"""

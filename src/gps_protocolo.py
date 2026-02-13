@@ -165,6 +165,33 @@ def empaquetar_ack(id_dispositivo, secuencia_ack):
     return mensaje_final
 
 
+def empaquetar_heartbeat(id_dispositivo, secuencia, flags=0):
+    """Empaqueta un mensaje HEARTBEAT (10 bytes - cabecera completa)"""
+    mensaje_sin_checksum = struct.pack(
+        "!BBHHHH",
+        VERSION,
+        TIPO_HEARTBEAT,
+        id_dispositivo,
+        secuencia,
+        0,  # checksum placeholder
+        flags,
+    )
+
+    checksum = calcular_checksum(mensaje_sin_checksum)
+
+    mensaje_final = struct.pack(
+        "!BBHHHH",
+        VERSION,
+        TIPO_HEARTBEAT,
+        id_dispositivo,
+        secuencia,
+        checksum,
+        flags,
+    )
+
+    return mensaje_final
+
+
 # ============== DESEMPAQUETADO DE MENSAJES ==============
 def desempaquetar_mensaje(mensaje):
     """

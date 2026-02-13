@@ -19,6 +19,7 @@ from gps_protocolo import (
     coordenadas_a_raw,
     desempaquetar_mensaje,
     empaquetar_mensaje_gps,
+    empaquetar_heartbeat,
     MAX_SEQ,
 )
 
@@ -164,6 +165,29 @@ class DispositivoGPS:
             print(f"[✗] Error al enviar: {e}")
             return False
 
+    def enviar_heartbeat(self):
+        """Envía un heartbeat al servidor"""
+        if self.socket is None:
+            print("[✗] Error: socket no inicializado")
+            return False
+
+        self.secuencia = (self.secuencia + 1) % MAX_SEQ
+        flags = self.obtener_flags()
+
+        mensaje = empaquetar_heartbeat(
+            id_dispositivo=self.id_dispositivo,
+            secuencia=self.secuencia,
+            flags=flags,
+        )
+
+        try:
+            self.socket.sendto(mensaje, self.servidor)
+            print(f"[→] HEARTBEAT #{self.secuencia} enviado ({len(mensaje)} bytes)")
+            return True
+        except socket.error as e:
+            print(f"[✗] Error al enviar heartbeat: {e}")
+            return False
+
     def ejecutar(self, intervalo=5, duracion=60):
         """
         Ejecuta el cliente GPS durante un tiempo determinado
@@ -210,6 +234,41 @@ class DispositivoGPS:
             else:
                 print("[!] Socket no estaba inicializado\n")
 
+    def ejecutar_heartbeat(self, intervalo=10, duracion=60):
+        """
+        Ejecuta envío periódico de heartbeats
+        """
+        if not self.conectar():
+            return
+
+        print("\n[▶] Iniciando envío de HEARTBEAT...")
+        print(f"    Intervalo: {intervalo}s")
+        if duracion > 0:
+            print(f"    Duración: {duracion}s")
+        else:
+            print("    Duración: indefinido (Ctrl+C para detener)")
+        print()
+
+        tiempo_inicio = time.time()
+
+        try:
+            while True:
+                if duracion > 0 and (time.time() - tiempo_inicio) >= duracion:
+                    print(f"\n[■] Tiempo completado ({duracion}s)")
+                    break
+
+                self.enviar_heartbeat()
+                time.sleep(intervalo)
+
+        except KeyboardInterrupt:
+            print("\n\n[■] Detenido por el usuario")
+        finally:
+            if self.socket is not None:
+                self.socket.close()
+                print("[✓] Socket cerrado\n")
+            else:
+                print("[!] Socket no estaba inicializado\n")
+
 
 def mostrar_menu():
     """Muestra el menú de opciones"""
@@ -221,7 +280,8 @@ def mostrar_menu():
     print("  2. Vehículo en movimiento urbano (30 km/h)")
     print("  3. Vehículo en carretera (80 km/h)")
     print("  4. Modo personalizado")
-    print("  5. Salir")
+    print("  5. Enviar solo HEARTBEAT")
+    print("  6. Salir")
     print("=" * 60)
 
 
@@ -251,9 +311,9 @@ def main():
 
     while True:
         mostrar_menu()
-        opcion = input("\nSeleccione una opción (1-5): ").strip()
+        opcion = input("\nSeleccione una opción (1-6): ").strip()
 
-        if opcion == "5":
+        if opcion == "6":
             print("\n[✓] Saliendo...\n")
             break
 
@@ -301,6 +361,11 @@ def main():
 
             except ValueError:
                 print("[✗] Valores inválidos, intente nuevamente")
+        elif opcion == "5":
+            # Solo heartbeat
+            gps.en_movimiento = False
+            gps.ignicion = False
+            gps.ejecutar_heartbeat(intervalo=10, duracion=60)
         else:
             print("[✗] Opción inválida")
 

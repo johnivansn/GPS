@@ -286,26 +286,12 @@ if not verificar_checksum(mensaje):
 ## 💻 Estructura del Código
 
 ```
-proyecto-gps/
+GPS/
 │
-├── gps_protocolo.py      # 🧩 Librería compartida
-│   ├── Empaquetado de mensajes
-│   ├── Desempaquetado de mensajes
-│   ├── Cálculo de CRC-16
-│   └── Utilidades de conversión
-│
-├── gps_cliente.py        # 📱 Simulador de dispositivo GPS
-│   ├── Generación de coordenadas
-│   ├── Simulación de movimiento
-│   ├── Envío de mensajes
-│   └── Manejo de ACKs
-│
-├── gps_servidor.py       # 🖥️ Servidor central
-│   ├── Recepción de mensajes
-│   ├── Validación y procesamiento
-│   ├── Registro de dispositivos
-│   └── Generación de estadísticas
-│
+├── src/
+│   ├── gps_protocolo.py  # 🧩 Librería compartida
+│   ├── gps_cliente.py    # 📱 Simulador de dispositivo GPS
+│   └── gps_servidor.py   # 🖥️ Servidor central
 └── README.md             # 📄 Este archivo
 ```
 
@@ -313,11 +299,28 @@ proyecto-gps/
 
 ## 🚀 Guía de Uso
 
+### Requisitos
+
+- Python 3.9+ (recomendado)
+
+### Quick Start
+
+```bash
+# 1) Probar el protocolo
+python gps_protocolo.py
+
+# 2) Iniciar servidor
+python gps_servidor.py
+
+# 3) Ejecutar cliente
+python gps_cliente.py
+```
+
 ### Paso 1: Probar el Protocolo
 
 ```bash
 # Ejecutar tests automáticos
-python gps_protocolo.py
+python src/gps_protocolo.py
 ```
 
 **Salida esperada:**
