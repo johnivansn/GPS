@@ -707,16 +707,6 @@ socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 ---
 
-## 👥 Equipo
-
-**Integrante 4:** Rendimiento, Algoritmos y Diseño
-- Diseño del protocolo binario
-- Implementación de algoritmos de control de errores
-- Optimización de rendimiento y batería
-- Desarrollo de aplicaciones cliente-servidor
-
----
-
 ## 📄 Licencia
 
 Proyecto educativo - Redes de Computadoras 2026

@@ -1,10 +1,27 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualizador Interactivo - Protocolo GPS</title>
     <style>
+        :root {
+            --bg-1: #0f1c2e;
+            --bg-2: #0b3c49;
+            --bg-3: #152238;
+            --accent: #ff8a3d;
+            --accent-2: #2dd4bf;
+            --ink: #0b1220;
+            --muted: #6b7280;
+            --card: #ffffff;
+            --card-2: #f6f7fb;
+            --line: rgba(15, 23, 42, 0.08);
+            --shadow: 0 20px 60px rgba(8, 18, 33, 0.18);
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap');
+
         * {
             margin: 0;
             padding: 0;
@@ -12,37 +29,40 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px;
+            font-family: 'Sora', 'Space Grotesk', system-ui, sans-serif;
+            background: #0f1c2e;
+            padding: 24px;
             min-height: 100vh;
         }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            background: var(--card);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
             overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.5);
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0b3c49;
             color: white;
-            padding: 30px;
+            padding: 36px 30px 28px;
             text-align: center;
+            position: relative;
         }
 
         .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-size: 2.4em;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
         }
 
         .header p {
             font-size: 1.1em;
-            opacity: 0.9;
+            opacity: 0.95;
+            font-weight: 400;
         }
 
         .main-content {
@@ -53,9 +73,9 @@
         }
 
         .control-panel {
-            background: #f8f9fa;
+            background: var(--card-2);
             padding: 30px;
-            border-right: 2px solid #e0e0e0;
+            border-right: 1px solid var(--line);
             overflow-y: auto;
             max-height: 800px;
         }
@@ -63,17 +83,19 @@
         .control-section {
             background: white;
             padding: 20px;
-            border-radius: 10px;
+            border-radius: 14px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+            border: 1px solid rgba(15, 23, 42, 0.06);
         }
 
         .control-section h3 {
-            color: #667eea;
+            color: var(--ink);
             margin-bottom: 15px;
             font-size: 1.2em;
-            border-bottom: 2px solid #667eea;
+            border-bottom: 2px solid rgba(45, 212, 191, 0.5);
             padding-bottom: 10px;
+            letter-spacing: 0.2px;
         }
 
         .input-group {
@@ -92,23 +114,25 @@
         .input-group select {
             width: 100%;
             padding: 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 5px;
+            border: 2px solid rgba(15, 23, 42, 0.08);
+            border-radius: 8px;
             font-size: 1em;
             transition: border-color 0.3s;
+            background: white;
         }
 
         .input-group input:focus,
         .input-group select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--accent-2);
+            box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.15);
         }
 
         .btn {
             width: 100%;
             padding: 12px;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 1em;
             font-weight: 600;
             cursor: pointer;
@@ -117,45 +141,46 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #ff8a3d;
             color: white;
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 8px 20px rgba(255, 138, 61, 0.35);
         }
 
         .btn-secondary {
-            background: #6c757d;
+            background: #1f2937;
             color: white;
         }
 
         .btn-secondary:hover {
-            background: #5a6268;
+            background: #111827;
         }
 
         .btn-danger {
-            background: #dc3545;
+            background: #ef4444;
             color: white;
         }
 
         .btn-danger:hover {
-            background: #c82333;
+            background: #dc2626;
         }
 
         .visualization-area {
             padding: 30px;
             position: relative;
-            background: #fafafa;
+            background: #f8fafc;
         }
 
         #canvas {
             width: 100%;
             height: 700px;
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            border: 1px solid rgba(15, 23, 42, 0.06);
         }
 
         .stats-panel {
@@ -168,16 +193,16 @@
         .stat-card {
             background: white;
             padding: 20px;
-            border-radius: 10px;
+            border-radius: 14px;
             text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            border-left: 4px solid #667eea;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+            border-left: 4px solid var(--accent-2);
         }
 
         .stat-value {
             font-size: 2em;
             font-weight: bold;
-            color: #667eea;
+            color: var(--ink);
             margin: 10px 0;
         }
 
@@ -190,12 +215,13 @@
             background: #1e1e1e;
             color: #00ff00;
             padding: 15px;
-            border-radius: 5px;
+            border-radius: 10px;
             font-family: 'Courier New', monospace;
             font-size: 0.85em;
             max-height: 200px;
             overflow-y: auto;
             margin-top: 20px;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
         }
 
         .message-log .timestamp {
@@ -246,9 +272,9 @@
 
         .tab {
             padding: 10px 20px;
-            background: #e0e0e0;
+            background: #eef2f7;
             border: none;
-            border-radius: 5px 5px 0 0;
+            border-radius: 12px 12px 0 0;
             cursor: pointer;
             font-weight: 600;
             transition: all 0.3s;
@@ -256,8 +282,8 @@
 
         .tab.active {
             background: white;
-            color: #667eea;
-            border-bottom: 3px solid #667eea;
+            color: var(--ink);
+            border-bottom: 3px solid var(--accent-2);
         }
 
         .tab-content {
@@ -269,8 +295,15 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
         }
 
         .transmitting {
@@ -284,7 +317,8 @@
             margin-top: 20px;
             padding: 15px;
             background: white;
-            border-radius: 5px;
+            border-radius: 10px;
+            border: 1px solid rgba(15, 23, 42, 0.06);
         }
 
         .legend-item {
@@ -300,18 +334,18 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
-            <h1>🛰️ Visualizador Interactivo del Protocolo GPS</h1>
-            <p>Integrante 4: Rendimiento, Algoritmos y Diseño - Simulación en Tiempo Real</p>
+            <h1>Visualizador Interactivo del Protocolo GPS</h1>
         </div>
 
         <div class="main-content">
             <!-- Panel de Control -->
             <div class="control-panel">
                 <div class="control-section">
-                    <h3>⚙️ Configuración del Dispositivo</h3>
+                    <h3>Configuración del Dispositivo</h3>
                     <div class="input-group">
                         <label>ID del Dispositivo</label>
                         <input type="number" id="deviceId" value="1234" min="1000" max="9999">
@@ -339,7 +373,7 @@
                 </div>
 
                 <div class="control-section">
-                    <h3>🚀 Modo de Simulación</h3>
+                    <h3>Modo de Simulación</h3>
                     <div class="input-group">
                         <label>Escenario</label>
                         <select id="scenario">
@@ -370,11 +404,11 @@
                 </div>
 
                 <div class="control-section">
-                    <h3>🎮 Controles</h3>
-                    <button class="btn btn-primary" id="btnSend">📤 Enviar Mensaje</button>
-                    <button class="btn btn-primary" id="btnStart">▶️ Iniciar Simulación</button>
-                    <button class="btn btn-secondary" id="btnStop" disabled>⏸️ Detener</button>
-                    <button class="btn btn-danger" id="btnReset">🔄 Reiniciar</button>
+                    <h3>Controles</h3>
+                    <button class="btn btn-primary" id="btnSend">Enviar Mensaje</button>
+                    <button class="btn btn-primary" id="btnStart">Iniciar Simulación</button>
+                    <button class="btn btn-secondary" id="btnStop" disabled>Detener</button>
+                    <button class="btn btn-danger" id="btnReset">Reiniciar</button>
                 </div>
             </div>
 
@@ -590,13 +624,13 @@
                 // Paquete
                 ctx.save();
                 ctx.translate(this.x, this.y);
-                
+
                 if (this.isLost) {
                     ctx.fillStyle = '#e74c3c';
                 } else {
                     ctx.fillStyle = this.type === 'gps' ? '#3498db' : '#2ecc71';
                 }
-                
+
                 ctx.beginPath();
                 ctx.arc(0, 0, this.size, 0, Math.PI * 2);
                 ctx.fill();
@@ -609,7 +643,7 @@
                 ctx.font = 'bold 20px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                
+
                 if (this.isLost) {
                     ctx.fillText('❌', 0, 0);
                 } else {
@@ -621,7 +655,7 @@
                     ctx.fillStyle = '#2c3e50';
                     ctx.font = 'bold 10px Arial';
                     ctx.fillText(`#${this.seq}`, 0, -this.size - 10);
-                    
+
                     // Tamaño del paquete
                     const size = this.type === 'gps' ? '30B' : '10B';
                     ctx.fillText(size, 0, this.size + 15);
@@ -635,10 +669,10 @@
         function sendMessage() {
             sequenceNumber++;
             messagesSent++;
-            
+
             const simulateLoss = document.getElementById('simulateLoss').checked;
             const isLost = simulateLoss && Math.random() < 0.1;
-            
+
             if (isLost) {
                 packetsLost++;
                 log(`❌ Mensaje #${sequenceNumber} PERDIDO (simulación)`, 'error');
@@ -664,10 +698,10 @@
 
             acksReceived++;
             log(`✅ ACK recibido para mensaje #${seq}`, 'success');
-            
+
             const ackPacket = new Packet('ack', seq, false);
             packets.push(ackPacket);
-            
+
             updateStats();
         }
 
@@ -677,7 +711,7 @@
             let speed = parseFloat(document.getElementById('speed').value);
             let heading = parseFloat(document.getElementById('heading').value);
 
-            switch(scenario) {
+            switch (scenario) {
                 case 'urban':
                     speed = 30;
                     heading = (heading + Math.random() * 10 - 5 + 360) % 360;
@@ -698,11 +732,11 @@
             if (speed > 0) {
                 const lat = parseFloat(document.getElementById('latitude').value);
                 const lon = parseFloat(document.getElementById('longitude').value);
-                
+
                 const distKm = (speed * 2) / 3600; // distancia en 2 segundos
                 const deltaLat = distKm * Math.cos(heading * Math.PI / 180) / 111.0;
                 const deltaLon = distKm * Math.sin(heading * Math.PI / 180) / (111.0 * Math.cos(lat * Math.PI / 180));
-                
+
                 document.getElementById('latitude').value = (lat + deltaLat).toFixed(6);
                 document.getElementById('longitude').value = (lon + deltaLon).toFixed(6);
             }
@@ -730,7 +764,7 @@
 
                 if (arrived) {
                     packets.splice(i, 1);
-                    
+
                     // Si es un paquete GPS que llegó, enviar ACK
                     if (packet.type === 'gps' && !packet.isLost) {
                         setTimeout(() => sendAck(packet.seq), 100);
@@ -744,16 +778,16 @@
         // Dibujar estructura del paquete
         function drawPacketStructure() {
             ctxPacket.clearRect(0, 0, canvasPacket.width, canvasPacket.height);
-            
+
             const startX = 50;
             const startY = 100;
             const fieldHeight = 60;
-            
+
             // Título
             ctxPacket.fillStyle = '#2c3e50';
             ctxPacket.font = 'bold 24px Arial';
             ctxPacket.fillText('Estructura del Mensaje GPS (30 bytes)', startX, 50);
-            
+
             // Cabecera
             const headerFields = [
                 { name: 'VER', bytes: 1, color: '#3498db' },
@@ -763,33 +797,33 @@
                 { name: 'CHECKSUM', bytes: 2, color: '#e74c3c' },
                 { name: 'FLAGS', bytes: 2, color: '#f39c12' }
             ];
-            
+
             let xOffset = startX;
             const pixelsPerByte = 40;
-            
+
             // Dibujar cabecera
             ctxPacket.font = 'bold 12px Arial';
             ctxPacket.fillStyle = '#2c3e50';
             ctxPacket.fillText('CABECERA (10 bytes)', startX, startY - 10);
-            
+
             headerFields.forEach(field => {
                 const width = field.bytes * pixelsPerByte;
-                
+
                 ctxPacket.fillStyle = field.color;
                 ctxPacket.fillRect(xOffset, startY, width, fieldHeight);
                 ctxPacket.strokeStyle = '#000';
                 ctxPacket.lineWidth = 2;
                 ctxPacket.strokeRect(xOffset, startY, width, fieldHeight);
-                
+
                 ctxPacket.fillStyle = 'white';
                 ctxPacket.font = 'bold 12px Arial';
                 ctxPacket.textAlign = 'center';
-                ctxPacket.fillText(field.name, xOffset + width/2, startY + 25);
-                ctxPacket.fillText(`${field.bytes}B`, xOffset + width/2, startY + 45);
-                
+                ctxPacket.fillText(field.name, xOffset + width / 2, startY + 25);
+                ctxPacket.fillText(`${field.bytes}B`, xOffset + width / 2, startY + 45);
+
                 xOffset += width;
             });
-            
+
             // Payload
             const payloadFields = [
                 { name: 'LAT', bytes: 4, color: '#2ecc71' },
@@ -801,46 +835,46 @@
                 { name: 'BAT', bytes: 1, color: '#f39c12' },
                 { name: 'EST', bytes: 1, color: '#e67e22' }
             ];
-            
+
             xOffset = startX;
             const payloadY = startY + fieldHeight + 30;
-            
+
             ctxPacket.fillStyle = '#2c3e50';
             ctxPacket.font = 'bold 12px Arial';
             ctxPacket.textAlign = 'left';
             ctxPacket.fillText('PAYLOAD (20 bytes)', startX, payloadY - 10);
-            
+
             payloadFields.forEach(field => {
                 const width = field.bytes * pixelsPerByte;
-                
+
                 ctxPacket.fillStyle = field.color;
                 ctxPacket.fillRect(xOffset, payloadY, width, fieldHeight);
                 ctxPacket.strokeStyle = '#000';
                 ctxPacket.lineWidth = 2;
                 ctxPacket.strokeRect(xOffset, payloadY, width, fieldHeight);
-                
+
                 ctxPacket.fillStyle = 'white';
                 ctxPacket.font = 'bold 12px Arial';
                 ctxPacket.textAlign = 'center';
-                ctxPacket.fillText(field.name, xOffset + width/2, payloadY + 25);
-                ctxPacket.fillText(`${field.bytes}B`, xOffset + width/2, payloadY + 45);
-                
+                ctxPacket.fillText(field.name, xOffset + width / 2, payloadY + 25);
+                ctxPacket.fillText(`${field.bytes}B`, xOffset + width / 2, payloadY + 45);
+
                 xOffset += width;
             });
-            
+
             // Valores actuales
             const valuesY = payloadY + fieldHeight + 50;
             ctxPacket.fillStyle = '#2c3e50';
             ctxPacket.font = '14px Arial';
             ctxPacket.textAlign = 'left';
-            
+
             const deviceId = document.getElementById('deviceId').value;
             const lat = document.getElementById('latitude').value;
             const lon = document.getElementById('longitude').value;
             const speed = document.getElementById('speed').value;
             const heading = document.getElementById('heading').value;
             const battery = document.getElementById('battery').value;
-            
+
             ctxPacket.fillText(`Valores actuales:`, startX, valuesY);
             ctxPacket.font = '12px monospace';
             ctxPacket.fillText(`ID: ${deviceId} | SEQ: ${sequenceNumber} | LAT: ${lat}° | LON: ${lon}°`, startX, valuesY + 25);
@@ -850,21 +884,21 @@
         // Dibujar mapa GPS
         function drawMap() {
             ctxMap.clearRect(0, 0, canvasMap.width, canvasMap.height);
-            
+
             // Título
             ctxMap.fillStyle = '#2c3e50';
             ctxMap.font = 'bold 24px Arial';
             ctxMap.textAlign = 'left';
             ctxMap.fillText('Trayectoria GPS', 20, 40);
-            
+
             if (gpsPath.length === 0) {
                 ctxMap.font = '16px Arial';
                 ctxMap.fillStyle = '#888';
                 ctxMap.textAlign = 'center';
-                ctxMap.fillText('Inicia la simulación para ver la trayectoria', canvasMap.width/2, canvasMap.height/2);
+                ctxMap.fillText('Inicia la simulación para ver la trayectoria', canvasMap.width / 2, canvasMap.height / 2);
                 return;
             }
-            
+
             // Calcular límites
             const lats = gpsPath.map(p => p.lat);
             const lons = gpsPath.map(p => p.lon);
@@ -872,22 +906,22 @@
             const maxLat = Math.max(...lats);
             const minLon = Math.min(...lons);
             const maxLon = Math.max(...lons);
-            
+
             const padding = 100;
             const mapWidth = canvasMap.width - 2 * padding;
             const mapHeight = canvasMap.height - 2 * padding;
-            
+
             // Función para convertir coordenadas
             function toMapX(lon) {
                 if (maxLon === minLon) return canvasMap.width / 2;
                 return padding + ((lon - minLon) / (maxLon - minLon)) * mapWidth;
             }
-            
+
             function toMapY(lat) {
                 if (maxLat === minLat) return canvasMap.height / 2;
                 return padding + ((maxLat - lat) / (maxLat - minLat)) * mapHeight;
             }
-            
+
             // Dibujar grid
             ctxMap.strokeStyle = '#e0e0e0';
             ctxMap.lineWidth = 1;
@@ -903,7 +937,7 @@
                 ctxMap.lineTo(padding + mapWidth, y);
                 ctxMap.stroke();
             }
-            
+
             // Dibujar trayectoria
             ctxMap.strokeStyle = '#3498db';
             ctxMap.lineWidth = 3;
@@ -918,20 +952,20 @@
                 }
             });
             ctxMap.stroke();
-            
+
             // Dibujar puntos
             gpsPath.forEach((point, i) => {
                 const x = toMapX(point.lon);
                 const y = toMapY(point.lat);
-                
+
                 const isFirst = i === 0;
                 const isLast = i === gpsPath.length - 1;
-                
+
                 ctxMap.fillStyle = isLast ? '#e74c3c' : (isFirst ? '#2ecc71' : '#3498db');
                 ctxMap.beginPath();
                 ctxMap.arc(x, y, isLast ? 12 : (isFirst ? 10 : 6), 0, Math.PI * 2);
                 ctxMap.fill();
-                
+
                 if (isFirst || isLast) {
                     ctxMap.fillStyle = '#2c3e50';
                     ctxMap.font = 'bold 12px Arial';
@@ -939,7 +973,7 @@
                     ctxMap.fillText(isFirst ? 'INICIO' : 'ACTUAL', x, y - 20);
                 }
             });
-            
+
             // Información
             ctxMap.fillStyle = '#2c3e50';
             ctxMap.font = '14px Arial';
@@ -953,12 +987,12 @@
 
         document.getElementById('btnStart').addEventListener('click', () => {
             if (isSimulating) return;
-            
+
             isSimulating = true;
             document.getElementById('btnStart').disabled = true;
             document.getElementById('btnStop').disabled = false;
             log('🚀 Simulación iniciada', 'success');
-            
+
             const interval = parseFloat(document.getElementById('interval').value) * 1000;
             simulationInterval = setInterval(() => {
                 updateMovement();
@@ -981,27 +1015,27 @@
                 clearInterval(simulationInterval);
                 isSimulating = false;
             }
-            
+
             sequenceNumber = 0;
             messagesSent = 0;
             acksReceived = 0;
             packetsLost = 0;
             packets = [];
             gpsPath = [];
-            
+
             document.getElementById('latitude').value = -17.3935;
             document.getElementById('longitude').value = -66.1570;
             document.getElementById('speed').value = 0;
             document.getElementById('heading').value = 0;
             document.getElementById('battery').value = 100;
-            
+
             document.getElementById('btnStart').disabled = false;
             document.getElementById('btnStop').disabled = true;
-            
+
             updateStats();
             drawPacketStructure();
             drawMap();
-            
+
             document.getElementById('messageLog').innerHTML = '<div class="success">[SISTEMA] Sistema reiniciado.</div>';
             log('🔄 Sistema reiniciado', 'success');
         });
@@ -1011,11 +1045,11 @@
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                 document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-                
+
                 tab.classList.add('active');
                 const tabName = tab.getAttribute('data-tab');
                 document.getElementById(`tab-${tabName}`).classList.add('active');
-                
+
                 // Actualizar visualización según tab
                 if (tabName === 'packet') {
                     drawPacketStructure();
@@ -1032,4 +1066,5 @@
         updateStats();
     </script>
 </body>
+
 </html>
