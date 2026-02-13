@@ -19,6 +19,7 @@ import time
 # ============== CONSTANTES DEL PROTOCOLO ==============
 VERSION = 0x01
 PUERTO_SERVIDOR = 9999
+MAX_SEQ = 0x10000  # 65536, rango de 16 bits
 
 # Tipos de mensaje
 TIPO_DATOS_GPS = 0x01

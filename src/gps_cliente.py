@@ -19,6 +19,7 @@ from gps_protocolo import (
     coordenadas_a_raw,
     desempaquetar_mensaje,
     empaquetar_mensaje_gps,
+    MAX_SEQ,
 )
 
 
@@ -108,7 +109,7 @@ class DispositivoGPS:
             print("[✗] Error: socket no inicializado")
             return False
 
-        self.secuencia += 1
+        self.secuencia = (self.secuencia + 1) % MAX_SEQ
 
         # Convertir coordenadas a formato raw
         lat_raw, lon_raw = coordenadas_a_raw(self.latitud, self.longitud)

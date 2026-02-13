@@ -20,6 +20,7 @@ from gps_protocolo import (
     convertir_coordenadas,
     desempaquetar_mensaje,
     empaquetar_ack,
+    MAX_SEQ,
 )
 
 
@@ -75,6 +76,18 @@ class ServidorGPS:
         else:
             self.dispositivos[id_dispositivo]["ultima_conexion"] = time.time()
 
+    def _es_seq_mas_reciente(self, seq_nueva, seq_ultima):
+        """
+        Compara secuencias con wrap-around (16 bits).
+        Retorna True si seq_nueva es mas reciente que seq_ultima.
+        """
+        if seq_nueva == seq_ultima:
+            return False
+        # Distancia hacia adelante en modulo 65536
+        adelante = (seq_nueva - seq_ultima) % MAX_SEQ
+        # Considerar "reciente" si esta en la mitad superior del anillo
+        return 0 < adelante < (MAX_SEQ // 2)
+
     def procesar_mensaje(self, datos, direccion_cliente):
         """Procesa un mensaje GPS recibido"""
         id_disp = datos["id_dispositivo"]
@@ -86,17 +99,19 @@ class ServidorGPS:
         # Verificar secuencia
         ultima_seq = self.dispositivos[id_disp]["ultima_seq"]
 
-        if seq <= ultima_seq:
-            # Mensaje duplicado o fuera de orden
+        if not self._es_seq_mas_reciente(seq, ultima_seq):
+            # Mensaje duplicado o fuera de orden (incluye wrap-around)
             self.mensajes_duplicados += 1
             print(
                 f"[!] Mensaje duplicado/antiguo: GPS #{id_disp}, SEQ={seq} (esperaba >{ultima_seq})"
             )
             return False
 
-        if seq > ultima_seq + 1:
+        # Calcular perdidas considerando wrap-around
+        salto = (seq - ultima_seq) % MAX_SEQ
+        if salto > 1:
             # Se perdieron mensajes
-            perdidos = seq - ultima_seq - 1
+            perdidos = salto - 1
             self.mensajes_perdidos += perdidos
             print(
                 f"[!] Se perdieron {perdidos} mensaje(s): GPS #{id_disp}, salto de SEQ {ultima_seq} a {seq}"
