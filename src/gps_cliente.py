@@ -237,9 +237,17 @@ def main():
     if len(sys.argv) >= 2:
         servidor_ip = sys.argv[1]
     if len(sys.argv) >= 3:
-        servidor_puerto = int(sys.argv[2])
+        try:
+            servidor_puerto = int(sys.argv[2])
+        except ValueError:
+            print("[✗] Puerto inválido. Uso: python src/gps_cliente.py [ip] [puerto] [id]")
+            return
     if len(sys.argv) >= 4:
-        id_dispositivo = int(sys.argv[3])
+        try:
+            id_dispositivo = int(sys.argv[3])
+        except ValueError:
+            print("[✗] ID inválido. Uso: python src/gps_cliente.py [ip] [puerto] [id]")
+            return
 
     while True:
         mostrar_menu()

@@ -306,7 +306,11 @@ def main():
 
     # Argumentos de línea de comandos
     if len(sys.argv) >= 2:
-        puerto = int(sys.argv[1])
+        try:
+            puerto = int(sys.argv[1])
+        except ValueError:
+            print("[✗] Puerto inválido. Uso: python src/gps_servidor.py [puerto] [ack=true|false]")
+            return
     if len(sys.argv) >= 3:
         enviar_ack = sys.argv[2].lower() in ["true", "1", "si", "yes"]
 
