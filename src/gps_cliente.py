@@ -302,11 +302,17 @@ def main():
         except ValueError:
             print("[✗] Puerto inválido. Uso: python src/gps_cliente.py [ip] [puerto] [id]")
             return
+        if not (0 <= servidor_puerto <= 65535):
+            print("[✗] Puerto fuera de rango (0-65535).")
+            return
     if len(sys.argv) >= 4:
         try:
             id_dispositivo = int(sys.argv[3])
         except ValueError:
             print("[✗] ID inválido. Uso: python src/gps_cliente.py [ip] [puerto] [id]")
+            return
+        if not (0 <= id_dispositivo <= 65535):
+            print("[✗] ID fuera de rango (0-65535).")
             return
 
     while True:

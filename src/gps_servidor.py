@@ -33,6 +33,7 @@ class ServidorGPS:
         enviar_ack=True,
         log_path="gps_log.txt",
         max_log_bytes=1_000_000,
+        ventana_tiempo_seg=300,
     ):
         self.puerto = puerto
         self.enviar_ack = enviar_ack
@@ -44,7 +45,7 @@ class ServidorGPS:
         self.mensajes_perdidos = 0
         self.mensajes_duplicados = 0
         self.errores = 0
-        self.ventana_tiempo_seg = 300  # 5 minutos
+        self.ventana_tiempo_seg = ventana_tiempo_seg
         self.log_path = log_path
         self.max_log_bytes = max_log_bytes
 
@@ -227,6 +228,9 @@ class ServidorGPS:
         if not self.log_path:
             return
         try:
+            log_dir = os.path.dirname(self.log_path)
+            if log_dir and not os.path.exists(log_dir):
+                os.makedirs(log_dir, exist_ok=True)
             if os.path.exists(self.log_path):
                 tam = os.path.getsize(self.log_path)
                 if tam >= self.max_log_bytes:
@@ -331,14 +335,14 @@ class ServidorGPS:
                         exito = self.procesar_mensaje(datos, direccion)
 
                         # Enviar ACK si está habilitado y el mensaje fue procesado
-                        if exito and datos["tipo"] == TIPO_DATOS_GPS:
-                            self.enviar_ack_mensaje(
-                                datos["id_dispositivo"], datos["secuencia"], direccion
-                            )
-                    else:
-                        # Error en el mensaje
-                        self.errores += 1
-                        print(f"[✗] Error al procesar mensaje de {direccion}: {error}")
+                    if exito and datos["tipo"] in (TIPO_DATOS_GPS, TIPO_HEARTBEAT):
+                        self.enviar_ack_mensaje(
+                            datos["id_dispositivo"], datos["secuencia"], direccion
+                        )
+                else:
+                    # Error en el mensaje
+                    self.errores += 1
+                    print(f"[✗] Error al procesar mensaje de {direccion}: {error}")
 
                 except socket.timeout:
                     # Timeout normal, continuar esperando
@@ -370,8 +374,11 @@ def main():
             puerto = int(sys.argv[1])
         except ValueError:
             print(
-                "[✗] Puerto inválido. Uso: python src/gps_servidor.py [puerto] [ack=true|false] [log_path] [max_kb]"
+                "[✗] Puerto inválido. Uso: python src/gps_servidor.py [puerto] [ack=true|false] [log_path] [max_kb] [ventana_seg]"
             )
+            return
+        if not (0 <= puerto <= 65535):
+            print("[✗] Puerto fuera de rango (0-65535).")
             return
     if len(sys.argv) >= 3:
         enviar_ack = sys.argv[2].lower() in ["true", "1", "si", "yes"]
@@ -384,8 +391,23 @@ def main():
             max_log_bytes = int(sys.argv[4]) * 1024
         except ValueError:
             print(
-                "[✗] max_kb inválido. Uso: python src/gps_servidor.py [puerto] [ack=true|false] [log_path] [max_kb]"
+                "[✗] max_kb inválido. Uso: python src/gps_servidor.py [puerto] [ack=true|false] [log_path] [max_kb] [ventana_seg]"
             )
+            return
+        if max_log_bytes <= 0:
+            print("[✗] max_kb debe ser mayor que 0.")
+            return
+    ventana_tiempo_seg = 300
+    if len(sys.argv) >= 6:
+        try:
+            ventana_tiempo_seg = int(sys.argv[5])
+        except ValueError:
+            print(
+                "[✗] ventana_seg inválido. Uso: python src/gps_servidor.py [puerto] [ack=true|false] [log_path] [max_kb] [ventana_seg]"
+            )
+            return
+        if ventana_tiempo_seg <= 0:
+            print("[✗] ventana_seg debe ser mayor que 0.")
             return
 
     # Crear y ejecutar servidor
@@ -394,6 +416,7 @@ def main():
         enviar_ack=enviar_ack,
         log_path=log_path,
         max_log_bytes=max_log_bytes,
+        ventana_tiempo_seg=ventana_tiempo_seg,
     )
     servidor.ejecutar()
 

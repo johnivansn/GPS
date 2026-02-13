@@ -353,8 +353,8 @@ python src/gps_servidor.py
 # Opción 2: Puerto personalizado + ACK deshabilitado
 python src/gps_servidor.py 8888 false
 
-# Opción 3: Puerto + ACK + log path + max log (KB)
-python src/gps_servidor.py 8888 true logs/gps_log.txt 1024
+# Opción 3: Puerto + ACK + log path + max log (KB) + ventana (seg)
+python src/gps_servidor.py 8888 true logs/gps_log.txt 1024 300
 ```
 
 **Pantalla del servidor:**
