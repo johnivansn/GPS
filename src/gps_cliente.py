@@ -10,6 +10,7 @@ import socket
 import time
 import random
 import sys
+import argparse
 from gps_protocolo import (
     FLAG_BATERIA_BAJA,
     FLAG_EN_MOVIMIENTO,
@@ -288,32 +289,113 @@ def mostrar_menu():
 def main():
     """Función principal"""
 
+    parser = argparse.ArgumentParser(add_help=True)
+    parser.add_argument("--mode", choices=["static", "urban", "highway", "custom", "heartbeat"])
+    parser.add_argument("--interval", type=int, default=None)
+    parser.add_argument("--duration", type=int, default=None)
+    parser.add_argument("--speed", type=float, default=None)
+    parser.add_argument("--heading", type=float, default=None)
+    parser.add_argument("--lat", type=float, default=None)
+    parser.add_argument("--lon", type=float, default=None)
+    parser.add_argument("--battery", type=float, default=None)
+    parser.add_argument("--id", dest="device_id", type=int, default=None)
+    parser.add_argument("--ip", dest="server_ip", type=str, default=None)
+    parser.add_argument("--port", dest="server_port", type=int, default=None)
+    parser.add_argument("--once", type=str, default="false")
+
+    args, _ = parser.parse_known_args()
+
     # Configuración por defecto
     servidor_ip = "127.0.0.1"
     servidor_puerto = PUERTO_SERVIDOR
     id_dispositivo = random.randint(1000, 9999)
 
     # Permitir argumentos de línea de comandos
-    if len(sys.argv) >= 2:
-        servidor_ip = sys.argv[1]
-    if len(sys.argv) >= 3:
-        try:
-            servidor_puerto = int(sys.argv[2])
-        except ValueError:
-            print("[✗] Puerto inválido. Uso: python src/gps_cliente.py [ip] [puerto] [id]")
+    usa_flags = any(arg.startswith("--") for arg in sys.argv[1:])
+    if not usa_flags:
+        if len(sys.argv) >= 2:
+            servidor_ip = sys.argv[1]
+        if len(sys.argv) >= 3:
+            try:
+                servidor_puerto = int(sys.argv[2])
+            except ValueError:
+                print("[✗] Puerto inválido. Uso: python src/gps_cliente.py [ip] [puerto] [id]")
+                return
+            if not (0 <= servidor_puerto <= 65535):
+                print("[✗] Puerto fuera de rango (0-65535).")
+                return
+        if len(sys.argv) >= 4:
+            try:
+                id_dispositivo = int(sys.argv[3])
+            except ValueError:
+                print("[✗] ID inválido. Uso: python src/gps_cliente.py [ip] [puerto] [id]")
+                return
+            if not (0 <= id_dispositivo <= 65535):
+                print("[✗] ID fuera de rango (0-65535).")
+                return
+
+    if args.server_ip is not None:
+        servidor_ip = args.server_ip
+    if args.server_port is not None:
+        servidor_puerto = args.server_port
+
+    if args.device_id is not None:
+        id_dispositivo = args.device_id
+
+    if args.mode:
+        gps = DispositivoGPS(id_dispositivo, servidor_ip, servidor_puerto)
+        if args.lat is not None:
+            gps.latitud = args.lat
+        if args.lon is not None:
+            gps.longitud = args.lon
+        if args.speed is not None:
+            gps.velocidad = args.speed
+        if args.heading is not None:
+            gps.rumbo = args.heading
+        if args.battery is not None:
+            gps.bateria = args.battery
+
+        intervalo = args.interval if args.interval is not None else 5
+        duracion = args.duration if args.duration is not None else 0
+        once = args.once.lower() in ["true", "1", "si", "yes"]
+
+        if args.mode == "static":
+            gps.velocidad = 0
+            gps.en_movimiento = False
+            gps.ignicion = False
+        elif args.mode == "urban":
+            gps.velocidad = 30 if args.speed is None else gps.velocidad
+            gps.rumbo = random.uniform(0, 360) if args.heading is None else gps.rumbo
+            gps.en_movimiento = True
+            gps.ignicion = True
+        elif args.mode == "highway":
+            gps.velocidad = 80 if args.speed is None else gps.velocidad
+            gps.rumbo = random.uniform(0, 360) if args.heading is None else gps.rumbo
+            gps.en_movimiento = True
+            gps.ignicion = True
+        elif args.mode == "custom":
+            gps.en_movimiento = gps.velocidad > 0
+            gps.ignicion = gps.velocidad > 0
+        elif args.mode == "heartbeat":
+            gps.en_movimiento = False
+            gps.ignicion = False
+            if once:
+                gps.conectar()
+                gps.enviar_heartbeat()
+                if gps.socket is not None:
+                    gps.socket.close()
+                return
+            gps.ejecutar_heartbeat(intervalo=intervalo, duracion=duracion)
             return
-        if not (0 <= servidor_puerto <= 65535):
-            print("[✗] Puerto fuera de rango (0-65535).")
+
+        if once:
+            gps.conectar()
+            gps.enviar_datos()
+            if gps.socket is not None:
+                gps.socket.close()
             return
-    if len(sys.argv) >= 4:
-        try:
-            id_dispositivo = int(sys.argv[3])
-        except ValueError:
-            print("[✗] ID inválido. Uso: python src/gps_cliente.py [ip] [puerto] [id]")
-            return
-        if not (0 <= id_dispositivo <= 65535):
-            print("[✗] ID fuera de rango (0-65535).")
-            return
+        gps.ejecutar(intervalo=intervalo, duracion=duracion)
+        return
 
     while True:
         mostrar_menu()

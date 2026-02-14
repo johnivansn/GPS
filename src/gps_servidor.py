@@ -48,6 +48,7 @@ class ServidorGPS:
         self.ventana_tiempo_seg = ventana_tiempo_seg
         self.log_path = log_path
         self.max_log_bytes = max_log_bytes
+        self._client_proc = None
 
         print("\n" + "=" * 60)
         print("  SERVIDOR GPS CENTRAL")
@@ -92,6 +93,7 @@ class ServidorGPS:
             print(f"\n[+] Nuevo dispositivo registrado: GPS #{id_dispositivo}")
         else:
             self.dispositivos[id_dispositivo]["ultima_conexion"] = time.time()
+
 
     def _es_seq_mas_reciente(self, seq_nueva, seq_ultima):
         """
@@ -335,14 +337,16 @@ class ServidorGPS:
                         exito = self.procesar_mensaje(datos, direccion)
 
                         # Enviar ACK si está habilitado y el mensaje fue procesado
-                    if exito and datos["tipo"] in (TIPO_DATOS_GPS, TIPO_HEARTBEAT):
-                        self.enviar_ack_mensaje(
-                            datos["id_dispositivo"], datos["secuencia"], direccion
+                        if exito and datos["tipo"] in (TIPO_DATOS_GPS, TIPO_HEARTBEAT):
+                            self.enviar_ack_mensaje(
+                                datos["id_dispositivo"], datos["secuencia"], direccion
+                            )
+                    else:
+                        # Error en el mensaje
+                        self.errores += 1
+                        print(
+                            f"[✗] Error al procesar mensaje de {direccion}: {error}"
                         )
-                else:
-                    # Error en el mensaje
-                    self.errores += 1
-                    print(f"[✗] Error al procesar mensaje de {direccion}: {error}")
 
                 except socket.timeout:
                     # Timeout normal, continuar esperando
@@ -418,6 +422,7 @@ def main():
         max_log_bytes=max_log_bytes,
         ventana_tiempo_seg=ventana_tiempo_seg,
     )
+
     servidor.ejecutar()
 
 

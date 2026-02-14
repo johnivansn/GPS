@@ -355,6 +355,36 @@ python src/gps_servidor.py 8888 false
 
 # Opción 3: Puerto + ACK + log path + max log (KB) + ventana (seg)
 python src/gps_servidor.py 8888 true logs/gps_log.txt 1024 300
+
+# Opción 4: Deshabilitar auto-cliente
+python src/gps_servidor.py 9999 true gps_log.txt 1000 300 false
+```
+
+### Interfaz Python (PyQt5)
+
+La interfaz ahora es nativa en Python y controla el servidor/cliente directamente.
+
+```bash
+# Instalar UI
+pip install PyQt5
+
+# Iniciar servidor (puerto por defecto 9999)
+python src/gps_servidor.py
+
+# Iniciar servidor en otro puerto (ej: 8888)
+python src/gps_servidor.py 8888
+
+# Abrir UI
+python src/gps_ui.py
+```
+
+### Solución de problemas (puerto en uso)
+
+Si el puerto `9999` está ocupado:
+
+```cmd
+netstat -ano | findstr :9999
+taskkill /PID <PID> /F
 ```
 
 **Pantalla del servidor:**
