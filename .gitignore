@@ -2,3 +2,4 @@ CAMBIOS_PENDIENTES.md
 .vscode/
 __pycache__/
 *.pyc
+gps_log.txt

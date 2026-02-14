@@ -21,6 +21,21 @@ class GPSUI(QtWidgets.QMainWindow):
         self._build_ui()
         self._apply_style()
 
+    def closeEvent(self, event):
+        reply = QtWidgets.QMessageBox.question(
+            self,
+            "Confirmar salida",
+            "¿Deseas cerrar la UI y detener servidor/cliente?",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.No,
+        )
+        if reply == QtWidgets.QMessageBox.Yes:
+            self.stop_client()
+            self.stop_server()
+            event.accept()
+        else:
+            event.ignore()
+
     def _build_ui(self) -> None:
         central = QtWidgets.QWidget()
         self.setCentralWidget(central)
@@ -214,12 +229,14 @@ class GPSUI(QtWidgets.QMainWindow):
             self._log("Servidor ya está en ejecución.")
             return
         try:
+            creation = subprocess.CREATE_NEW_CONSOLE if os.name == "nt" else 0
             self.server_proc = subprocess.Popen(
                 [
                     sys.executable,
                     os.path.join("src", "gps_servidor.py"),
                     str(self.server_port.value()),
-                ]
+                ],
+                creationflags=creation,
             )
             self._log("Servidor iniciado.")
         except Exception as e:
@@ -237,7 +254,8 @@ class GPSUI(QtWidgets.QMainWindow):
             self._log("Cliente ya está en ejecución.")
             return
         try:
-            self.client_proc = subprocess.Popen(self._client_args(once=False))
+            creation = subprocess.CREATE_NEW_CONSOLE if os.name == "nt" else 0
+            self.client_proc = subprocess.Popen(self._client_args(once=False), creationflags=creation)
             self._log("Cliente iniciado.")
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", f"No se pudo iniciar cliente: {e}")
