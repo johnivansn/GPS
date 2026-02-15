@@ -1,30 +1,28 @@
 # 📡 Protocolo GPS - Sistema de Rastreo en Tiempo Real
 
-## Redes de Computadoras - Práctica 3
-
 ---
 
 ## 🎯 Objetivo del Proyecto
 
 Diseñar e implementar un **protocolo de comunicación eficiente** para dispositivos GPS que permita transmitir datos de localización y estado en tiempo real a un servidor central, considerando:
 
-- 🔋 **Restricciones de batería** en dispositivos móviles
-- 📶 **Ancho de banda limitado** (redes 2G/3G/4G)
-- 🌐 **Transmisión confiable** sobre redes no confiables
-- 🔒 **Seguridad básica** de los datos
+- **Restricciones de batería** en dispositivos móviles
+- **Ancho de banda limitado** (redes 2G/3G/4G)
+- **Transmisión confiable** sobre redes no confiables
+- **Seguridad básica** de los datos
 
 ---
 
 ## 📚 Fundamentos Teóricos
 
-### Conceptos Aplicados de los PDFs del Curso
+### Conceptos Aplicados
 
-| PDF                              | Conceptos Implementados           | Ubicación en el Código    |
-| -------------------------------- | --------------------------------- | ------------------------- |
-| **PDF 2 - Capa de Enlace**       | CRC-16, detección de errores      | `calcular_checksum()`     |
-| **PDF 3 - Capa de Red**          | Direccionamiento IP, enrutamiento | Sockets UDP               |
-| **PDF 4 - Capa de Transporte**   | UDP, ARQ, control de flujo        | ACK, reintentos, timeouts |
-| **PDF 5 - Capa de Aplicaciones** | Cliente-servidor, sockets         | Arquitectura completa     |
+| Capa                     | Conceptos Implementados           | Ubicación en el Código    |
+| ------------------------ | --------------------------------- | ------------------------- |
+| **Capa de Enlace**       | CRC-16, detección de errores      | `calcular_checksum()`     |
+| **Capa de Red**          | Direccionamiento IP, enrutamiento | Sockets UDP               |
+| **Capa de Transporte**   | UDP, ARQ, control de flujo        | ACK, reintentos, timeouts |
+| **Capa de Aplicaciones** | Cliente-servidor, sockets         | Arquitectura completa     |
 
 ---
 
@@ -146,11 +144,11 @@ Si usáramos JSON:
 
 **Decisión:** Usar **UDP + mecanismos propios de confiabilidad**
 
-#### Fundamento Teórico (PDF 4)
+#### Fundamento Teórico
 
-> *"UDP no asegura la integridad de los datos ni implementa control de flujo... Es extremadamente simple, no necesita almacenar información acerca del intercambio en curso"* (PDF 4, pág. 17)
+> *"UDP no asegura la integridad de los datos ni implementa control de flujo... Es extremadamente simple, no necesita almacenar información acerca del intercambio en curso"*
 
-> *"El streaming es tolerante a pérdidas pero requiere retardos acotados"* (PDF 4, pág. 19)
+> *"El streaming es tolerante a pérdidas pero requiere retardos acotados"*
 
 **Aplicación:** GPS tolera perder 1-2 posiciones, pero necesita latencia baja.
 
@@ -182,8 +180,8 @@ def calcular_checksum(datos):
 - ✅ 100% de errores de 2 bits
 - ✅ 99.998% de errores de burst ≤ 16 bits
 
-**Fundamento Teórico (PDF 2):**
-> *"CRC detecta errores en burst de una longitud menor o igual al grado del polinomio generador"* (PDF 2, pág. 15)
+**Fundamento Teórico:**
+> *"CRC detecta errores en burst de una longitud menor o igual al grado del polinomio generador"*
 
 ---
 
@@ -206,8 +204,8 @@ if seq > ultima_seq + 1:
 - 📉 Mensajes perdidos
 - ⚠️ Desorden en la recepción
 
-**Fundamento Teórico (PDF 4):**
-> *"Con sólo dos números de paquete es suficiente... El receptor debe verificar que los paquetes recibidos tengan el número de secuencia esperado"* (PDF 4, pág. 38)
+**Fundamento Teórico:**
+> *"Con sólo dos números de paquete es suficiente... El receptor debe verificar que los paquetes recibidos tengan el número de secuencia esperado"*
 
 ---
 
@@ -227,8 +225,8 @@ except socket.timeout:
     # Timeout, reintentar
 ```
 
-**Fundamento Teórico (PDF 4):**
-> *"Al recibir un ACK debe marcar ese paquete como recibido"* (PDF 4, pág. 27)
+**Fundamento Teórico:**
+> *"Al recibir un ACK debe marcar ese paquete como recibido"*
 
 ---
 
@@ -251,8 +249,8 @@ for intento in range(MAX_REINTENTOS):
             print("❌ Mensaje perdido definitivamente")
 ```
 
-**Fundamento Teórico (PDF 4):**
-> *"La fase de espera exponencial... ajusta las retransmisiones de manera que estimen la carga actual"* (PDF 4, pág. 47)
+**Fundamento Teórico:**
+> *"La fase de espera exponencial... ajusta las retransmisiones de manera que estimen la carga actual"*
 
 ---
 
@@ -289,10 +287,10 @@ if not verificar_checksum(mensaje):
 GPS/
 │
 ├── src/
-│   ├── gps_protocolo.py  # 🧩 Librería compartida
-│   ├── gps_cliente.py    # 📱 Simulador de dispositivo GPS
-│   └── gps_servidor.py   # 🖥️ Servidor central
-└── README.md             # 📄 Este archivo
+│   ├── gps_protocolo.py  # Librería compartida
+│   ├── gps_cliente.py    # Simulador de dispositivo GPS
+│   └── gps_servidor.py   # Servidor central
+└── README.md
 ```
 
 ---
@@ -593,11 +591,10 @@ Errores CRC:       0 mensajes
 
 ## 🎓 Conceptos del Curso Aplicados
 
-### 1. Capa de Enlace (PDF 2)
+### 1. Capa de Enlace
 
 **Concepto:** Detección de errores con CRC
 ```python
-# PDF 2, pág. 14-15
 def calcular_checksum(datos):
     crc = 0xFFFF
     for byte in datos:
@@ -612,11 +609,10 @@ def calcular_checksum(datos):
 
 ---
 
-### 2. Capa de Red (PDF 3)
+### 2. Capa de Red
 
 **Concepto:** Fragmentación y MTU
 ```python
-# PDF 3, pág. 39-40
 # Nuestro mensaje (30 bytes) nunca necesita fragmentarse
 # MTU típico Ethernet: 1500 bytes
 # MTU típico 3G/4G: 1280-1500 bytes
@@ -625,14 +621,12 @@ def calcular_checksum(datos):
 
 ---
 
-### 3. Capa de Transporte (PDF 4)
+### 3. Capa de Transporte
 
 **Concepto:** UDP + ARQ personalizado
 ```python
-# PDF 4, pág. 16-17 (UDP)
 socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-# PDF 4, pág. 24-46 (RDT - Reliable Data Transfer)
 # Implementamos nuestro propio:
 # - Numeración de secuencia
 # - ACKs
@@ -642,11 +636,10 @@ socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 ---
 
-### 4. Capa de Aplicaciones (PDF 5)
+### 4. Capa de Aplicaciones
 
 **Concepto:** Arquitectura cliente-servidor
 ```python
-# PDF 5, pág. 9-11
 # Cliente:
 #   - Inicia solicitudes
 #   - Gestiona interfaz de usuario
@@ -708,12 +701,12 @@ socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 ### Aplicación de Conceptos Teóricos
 
-| PDF   | Concepto                  | Implementación        |
-| ----- | ------------------------- | --------------------- |
-| **2** | CRC, checksums            | `calcular_checksum()` |
-| **3** | IP, MTU, fragmentación    | Mensaje < MTU         |
-| **4** | UDP, ARQ, timeouts        | Sockets + reintentos  |
-| **5** | Cliente-servidor, sockets | Arquitectura completa |
+| Concepto                  | Implementación        |
+| ------------------------- | --------------------- |
+| CRC, checksums            | `calcular_checksum()` |
+| IP, MTU, fragmentación    | Mensaje < MTU         |
+| UDP, ARQ, timeouts        | Sockets + reintentos  |
+| Cliente-servidor, sockets | Arquitectura completa |
 
 ---
 
@@ -728,15 +721,6 @@ socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 ---
 
-## 📚 Referencias
-
-- **PDF 2:** Capa de Enlace - Detección de errores (págs. 14-21)
-- **PDF 3:** Capa de Red - Direccionamiento y MTU (págs. 39-48)
-- **PDF 4:** Capa de Transporte - UDP y RDT (págs. 16-46)
-- **PDF 5:** Capa de Aplicaciones - Sockets (págs. 132-143)
-
----
-
 ## 📄 Licencia
 
-Proyecto educativo - Redes de Computadoras 2026
+Este proyecto está bajo la licencia MIT. Ver `LICENSE`.
